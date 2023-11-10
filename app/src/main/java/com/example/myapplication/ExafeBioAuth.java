@@ -3,7 +3,6 @@ package com.example.myapplication;
 import static android.content.Context.FINGERPRINT_SERVICE;
 import static android.content.Context.KEYGUARD_SERVICE;
 import static androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG;
-import static androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL;
 
 import android.Manifest;
 import android.app.Activity;
@@ -24,6 +23,8 @@ import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
+import org.greenrobot.eventbus.EventBus;
+
 import java.util.concurrent.Executor;
 
 import javax.crypto.Cipher;
@@ -35,19 +36,11 @@ public class ExafeBioAuth {
 
     private ExafeBioAuth() { };
 
-    public static ExafeBioAuth getInstance() {
-        if (instance == null)
-        {
-            instance = new ExafeBioAuth();
-        }
 
-        return instance;
-    }
 
     private static final int REQUEST_FINGERPRINT_ENROLLMENT_AUTH = 10;
 
     private KeyManager keyManager;
-
     private Executor executor;
     private BiometricPrompt biometricPrompt;
     private BiometricPrompt.PromptInfo promptInfo;
@@ -57,6 +50,31 @@ public class ExafeBioAuth {
 
     private FingerprintManager.CryptoObject cryptoObject; // over api 23
     private BiometricPrompt.CryptoObject bioCryptoObject; // over api 28
+    private boolean changed;
+    private int resultCode;
+    private String title = "title";
+    private String subTitle = "subTitle";
+    private String explanation = "explanation";
+    private String cancel = "cancel";
+    public static ExafeBioAuth getInstance() {
+        if (instance == null)
+        {
+            instance = new ExafeBioAuth();
+        }
+        return instance;
+    }
+    public void setText (String title, String subTitle, String explanation, String cancel){
+        this.title = title;
+        this.subTitle = subTitle;
+        this.explanation = explanation;
+        this.cancel = cancel;
+    }
+
+    /*
+    0: 지문인식 성공
+    1: 지문인식 실패
+    2: 지문인식 취소
+     */
 
     private boolean canAuthenticate(Activity activity, Context context){
 
@@ -93,7 +111,6 @@ public class ExafeBioAuth {
         {
             fingerprintManager = (FingerprintManager) context.getSystemService(FINGERPRINT_SERVICE);
             keyguardManager = (KeyguardManager) context.getSystemService(KEYGUARD_SERVICE);
-            Log.d("MY_APP", "here2");
             if (!fingerprintManager.isHardwareDetected()) // 지문을 사용할 수 없는 디바이스인 경우
             {
                 Log.d("MY_APP", "it is not device that can use fingerprint");
@@ -117,16 +134,23 @@ public class ExafeBioAuth {
                 activity.startActivityForResult(intent, REQUEST_FINGERPRINT_ENROLLMENT_AUTH);
                 return false;
             }
-
             return true;
         }
-        Log.d("MY_APP", "here3");
         return false;
     }
-
+/*\
+*
+* @return :
+*
+ */
 
     public void authenticate(Activity activity, Context context) {
-
+        changed = true;
+        if(!check()) {
+            Log.d("MY_APP", "detect biometric changes");
+            EventBus.getDefault().post(new BioEvent(resultCode));
+            changed = false;
+        }
         keyManager = KeyManager.getInstance();
         // api 28 ( ANDROID 9.0 ) 이상은 biometricPrompt 사용
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -139,34 +163,52 @@ public class ExafeBioAuth {
                     @Override
                     public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
                         super.onAuthenticationError(errorCode, errString);
-                        Log.d("MY_APP", errString.toString());
+                        if(errorCode == 13){
+                            resultCode = 2;
+                            //((MainActivity)MainActivity.mContext).bioAuthCancel();
+                            EventBus.getDefault().post(new BioEvent(resultCode));
+                        } else if(errorCode == 10){
+                            resultCode = 2;
+                            EventBus.getDefault().post(new BioEvent(resultCode));
+                        }
+
                     }
 
                     @Override
                     public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
                         super.onAuthenticationSucceeded(result);
                         Log.d("MY_APP", "auth success");
+                        if(changed){
+                            resultCode = 0;
+                            EventBus.getDefault().post(new BioEvent(resultCode));
+                        } else{
+                            resultCode = 0;
+                            EventBus.getDefault().post(new BioEvent(resultCode));
+                        }
+
                     }
 
                     @Override
                     public void onAuthenticationFailed() {
                         super.onAuthenticationFailed();
                         Log.d("MY_APP", "auth failed");
+                        resultCode = 1;
+                        EventBus.getDefault().post(new BioEvent(resultCode));
                     }
                 });
 
                 // DEVICE_CREDENTIAL 및 BIOMETRIC_STRING | DEVICE_CREDENTIAL 은 안드로이드 10 이하에서 지원되지 않는다.
                 // 안드로이드 10 이하에서 PIN 이나 패턴, 비밀번호가 있는지 확인하려면 KeyguardManager.isDeviceSecure() 함수를 사용할 것
                 promptInfo = new BiometricPrompt.PromptInfo.Builder()
-                        .setTitle("지문 인증")
-                        .setSubtitle("기기에 등록된 지문을 이용하여 지문을 인증해주세요.")
-                        .setDescription("생체 인증 설명")
+                        .setTitle(title)
+                        .setSubtitle(subTitle)
+                        .setDescription(explanation)
                         // BIOMETRIC_STRONG 은 안드로이드 11 에서 정의한 클래스 3 생체 인식을 사용하는 인증 - 암호회된 키 필요
                         // BIOMETRIC_WEAK 은 안드로이드 11 에서 정의한 클래스 2 생체 인식을 사용하는 인증 - 암호화된 키까지 필요하지는 않음
                         // DEVICE_CREDENTIAL 은 화면 잠금 사용자 인증 정보를 사용하는 인증 - 사용자의 PIN, 패턴 또는 비밀번호
                         .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
                         .setConfirmationRequired(false) // 명시적인 사용자 작업 ( 생체 인식 전 한번더 체크 ) 없이 인증할건지 default : true
-                        .setNegativeButtonText("취소")
+                        .setNegativeButtonText(cancel)
                         .build();
 
                 keyManager.generateKey();
@@ -176,7 +218,6 @@ public class ExafeBioAuth {
                     bioCryptoObject = new BiometricPrompt.CryptoObject(keyManager.getCipher());
                     biometricPrompt.authenticate(promptInfo, bioCryptoObject);
                 }
-
                 biometricPrompt.authenticate(promptInfo);
             }
 
@@ -236,7 +277,6 @@ public class ExafeBioAuth {
                         public void onAuthenticationFailed() {
                             super.onAuthenticationFailed();
                             Log.d("MY_APP", "fingerprint auth failed");
-
                         }
 
                         @Override
@@ -251,8 +291,6 @@ public class ExafeBioAuth {
             }
         }
     }
-
-
     public boolean check() {
         return KeyManager.check();
     }

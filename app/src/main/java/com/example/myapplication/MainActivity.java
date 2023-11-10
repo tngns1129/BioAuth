@@ -1,54 +1,40 @@
 package com.example.myapplication;
 
 
-import static androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG;
-import static androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK;
-import static androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL;
-
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import androidx.biometric.BiometricManager;
-import androidx.biometric.BiometricPrompt;
-import androidx.core.content.ContextCompat;
-
-import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
-import android.provider.Settings;
-import android.security.keystore.KeyPermanentlyInvalidatedException;
 import android.util.Log;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import java.util.concurrent.Executor;
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
-import javax.crypto.KeyGenerator;
-
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ExafeBioAuthInterface {
 
     private ExafeBioAuth exafeBioAuth;
-
     private LinearLayout layout;
     private Button button;
     private TextView title;
-    private Button checkBtn;
+    private String authTitle;
+    private String authSubTitle;
+    private String authExplanation;
+    private String authCancel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        exafeBioAuth = ExafeBioAuth.getInstance();
+
 
         layout = new LinearLayout(this);
         title = new TextView(this);
         button = new Button(this);
-        checkBtn = new Button(this);
 
         ViewGroup.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -61,25 +47,45 @@ public class MainActivity extends AppCompatActivity {
         title.setText("생체 인증 테스트 앱");
 
         button.setText("생체 인증");
-        checkBtn.setText("변화감지");
 
         layout.addView(title);
         layout.addView(button);
-        layout.addView(checkBtn);
 
         setContentView(layout);
+
+        authTitle = "Biometric title";
+        authSubTitle = "Biometric sub title";
+        authExplanation = "Biometric explanation";
+        authCancel = "cancel";
+
+        exafeBioAuth = ExafeBioAuth.getInstance();
+        exafeBioAuth.setText(authTitle, authSubTitle, authExplanation, authCancel);
+
+        try{
+            EventBus.getDefault().register(this);
+        } catch (Exception e){}
 
         button.setOnClickListener(view -> {
             exafeBioAuth.authenticate(this , getApplicationContext());
         });
 
-        checkBtn.setOnClickListener(view -> {
-            if(exafeBioAuth.check()){
-                Log.d("MY_APP", "인증 변화 감지안됨");
-            }else{
-                Log.d("MY_APP", "인증 변화 감지됨");
-            }
-        });
     }
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    @Override
+    public void bioEvent(BioEvent event) {
+        switch(event.helloEventBus){
+            case 0: //생체 인증 성공
+                Log.d("MY_APP_MAIN","success");
+                break;
+            case 1: //생체 인증 실패
+                Log.d("MY_APP_MAIN","fail");
+                break;
+            case 2: //생체 인증 취소
+                Log.d("MY_APP_MAIN","cancel");
+                break;
+            case 99: //지문 추가됨
+                Log.d("MY_APP_MAIN","detect biometric changes");
 
+        }
+    }
 }

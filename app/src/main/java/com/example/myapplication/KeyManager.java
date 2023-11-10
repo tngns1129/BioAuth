@@ -80,7 +80,7 @@ public class KeyManager {
             key = (SecretKey) keyStore.getKey(KEY_NAME, null);
             cipher.init(Cipher.ENCRYPT_MODE, key);
             return true;
-        }catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
@@ -88,11 +88,10 @@ public class KeyManager {
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     public static boolean check(){
-        Log.d("MY_APP", "here " + cipher);
         if(cipher != null){
             try{
                 cipher.init(Cipher.ENCRYPT_MODE, key);
-            }catch(KeyPermanentlyInvalidatedException e){
+            } catch(KeyPermanentlyInvalidatedException e){
                 e.printStackTrace();
                 return false;
             } catch (InvalidKeyException e) {
