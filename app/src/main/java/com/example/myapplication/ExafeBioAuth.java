@@ -148,6 +148,7 @@ public class ExafeBioAuth {
         changed = true;
         if(!check()) {
             Log.d("MY_APP", "detect biometric changes");
+            resultCode = 99;
             EventBus.getDefault().post(new BioEvent(resultCode));
             changed = false;
         }
@@ -182,7 +183,7 @@ public class ExafeBioAuth {
                             resultCode = 0;
                             EventBus.getDefault().post(new BioEvent(resultCode));
                         } else{
-                            resultCode = 0;
+                            resultCode = 99;
                             EventBus.getDefault().post(new BioEvent(resultCode));
                         }
 
@@ -264,12 +265,16 @@ public class ExafeBioAuth {
                         public void onAuthenticationError(int errorCode, CharSequence errString) {
                             super.onAuthenticationError(errorCode, errString);
                             Log.d("MY_APP", "fingerprint " + errorCode);
+                            resultCode = 2;
+                            EventBus.getDefault().post(new BioEvent(resultCode));
                         }
 
                         @Override
                         public void onAuthenticationSucceeded(FingerprintManager.AuthenticationResult result) {
                             super.onAuthenticationSucceeded(result);
                             Log.d("MY_APP", "fingerprint auth success");
+                            resultCode = 0;
+                            EventBus.getDefault().post(new BioEvent(resultCode));
 
                         }
 
@@ -277,6 +282,8 @@ public class ExafeBioAuth {
                         public void onAuthenticationFailed() {
                             super.onAuthenticationFailed();
                             Log.d("MY_APP", "fingerprint auth failed");
+                            resultCode = 1;
+                            EventBus.getDefault().post(new BioEvent(resultCode));
                         }
 
                         @Override

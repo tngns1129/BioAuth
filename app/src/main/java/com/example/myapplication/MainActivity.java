@@ -30,8 +30,6 @@ public class MainActivity extends AppCompatActivity implements ExafeBioAuthInter
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
-
         layout = new LinearLayout(this);
         title = new TextView(this);
         button = new Button(this);
