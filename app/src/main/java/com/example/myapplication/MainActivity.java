@@ -13,68 +13,73 @@ import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.security.keystore.KeyPermanentlyInvalidatedException;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.concurrent.Executor;
 
+import javax.crypto.KeyGenerator;
+
 public class MainActivity extends AppCompatActivity {
 
-    Button btn;
-    Button checkBtn;
-    ExafeBioAuth exafeBioAuth;
+    private ExafeBioAuth exafeBioAuth;
+
+    private LinearLayout layout;
+    private Button button;
+    private TextView title;
+    private Button checkBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        exafeBioAuth = new ExafeBioAuth(this);
-        exafeBioAuth.init();
+        exafeBioAuth = ExafeBioAuth.getInstance();
 
-        this.InitView();
-        this.SetListener();
+        layout = new LinearLayout(this);
+        title = new TextView(this);
+        button = new Button(this);
+        checkBtn = new Button(this);
 
+        ViewGroup.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+        );
 
+        layout.setLayoutParams(layoutParams);
+        layout.setOrientation(LinearLayout.VERTICAL);
 
-    }
+        title.setText("생체 인증 테스트 앱");
 
-    public void InitView(){
-        btn = (Button)findViewById(R.id.btn);
-    }
+        button.setText("생체 인증");
+        checkBtn.setText("변화감지");
 
-    public void SetListener(){
+        layout.addView(title);
+        layout.addView(button);
+        layout.addView(checkBtn);
 
-        btn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
+        setContentView(layout);
 
-                int result = exafeBioAuth.authcheck();
-                Log.d("MY_APP_TAG_MAIN", Integer.toString(result));
-                if(result == exafeBioAuth.BIOMETRIC_AVAILABLE){
-                    Log.d("MY_APP_TAG_MAIN", "생체 인증 가능");
-                }
-                else if(result == exafeBioAuth.BIOMETRIC_ERROR_NO_HARDWARE){
-                    Log.d("MY_APP_TAG_MAIN", "생체 인증 불가 단말");
-                }
-                else if(result == exafeBioAuth.BIOMETRIC_ERROR_HW_UNAVAILABLE){
-                    Log.d("MY_APP_TAG_MAIN", "생체 인증 현재 불가능");
-                }
-                else if(result == exafeBioAuth.BIOMETRIC_ERROR_NONE_ENROLLED){
-                    Log.d("MY_APP_TAG_MAIN", "생체 인증 등록 필요");
-                }
-
-                exafeBioAuth.auth();
-
-
-
-            }
+        button.setOnClickListener(view -> {
+            exafeBioAuth.authenticate(this , getApplicationContext());
         });
 
+        checkBtn.setOnClickListener(view -> {
+            if(exafeBioAuth.check()){
+                Log.d("MY_APP", "인증 변화 감지안됨");
+            }else{
+                Log.d("MY_APP", "인증 변화 감지됨");
+            }
+        });
     }
+
 }
