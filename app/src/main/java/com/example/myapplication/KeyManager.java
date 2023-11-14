@@ -93,6 +93,7 @@ public class KeyManager {
                 cipher.init(Cipher.ENCRYPT_MODE, key);
             } catch(KeyPermanentlyInvalidatedException e){
                 e.printStackTrace();
+                Log.d("MY_APP_KEY","HERE");
                 return false;
             } catch (InvalidKeyException e) {
                 e.printStackTrace();

@@ -8,6 +8,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.KeyguardManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.fingerprint.FingerprintManager;
@@ -18,6 +19,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
@@ -151,6 +153,7 @@ public class ExafeBioAuth {
             resultCode = 99;
             EventBus.getDefault().post(new BioEvent(resultCode));
             changed = false;
+
         }
         keyManager = KeyManager.getInstance();
         // api 28 ( ANDROID 9.0 ) 이상은 biometricPrompt 사용
